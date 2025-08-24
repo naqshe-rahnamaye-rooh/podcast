@@ -1,0 +1,63 @@
+# نام Workflow که در تب Actions گیت‌هاب نمایش داده می‌شود
+name: Generate Feed and Deploy to GitHub Pages
+
+# تریگر: این ورک‌فلو هر بار که به شاخه main پوش می‌شود، اجرا خواهد شد
+on:
+  push:
+    branches:
+      - main
+
+# مجوزهای لازم برای ورک‌فلو
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# تعریف جاب‌ها (مراحل اجرایی)
+jobs:
+  build-and-deploy:
+    # اجرا روی آخرین نسخه اوبونتو
+    runs-on: ubuntu-latest
+
+    steps:
+      # مرحله ۱: دریافت کد از ریپازیتوری
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # مرحله ۲: نصب و راه‌اندازی پایتون
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # مرحله ۳: نصب کتابخانه‌های مورد نیاز پایتون
+      - name: Install dependencies
+        run: pip install mutagen jdatetime
+
+      # مرحله ۴: اجرای اسکریپت برای ساخت فید و صفحه وب
+      - name: Generate RSS feed and HTML page
+        run: python generate_feed.py
+
+      # مرحله ۵: کامیت کردن فایل‌های تغییر یافته (rss.xml, index.html)
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: Auto-generate RSS feed and HTML page'
+          commit_user_name: github-actions[bot]
+          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+      # مرحله ۶: تنظیم کردن GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # مرحله ۷: آپلود کردن آرتیفکت سایت برای دیپلوی
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      # مرحله ۸: دیپلوی کردن آرتیفکت در GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
